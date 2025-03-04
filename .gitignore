@@ -1,0 +1,34 @@
+# ------------------------
+# Python
+# ------------------------
+__pycache__/
+*.py[cod]
+*$py.class
+
+# If you use a virtual environment folder named venv, env, etc.
+venv/
+env/
+.venv/
+venv.bak/
+
+# Python egg and build artifacts
+*.egg-info/
+.eggs/
+dist/
+build/
+*.egg
+
+# Pip generated files
+pip-log.txt
+pip-delete-this-directory.txt
+
+# ------------------------
+# PyCharm
+# ------------------------
+.idea/
+
+# ------------------------
+# Operating System files
+# ------------------------
+.DS_Store
+Thumbs.db
