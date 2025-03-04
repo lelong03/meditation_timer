@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>{{ translations.session_title }}</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css?family=Montserrat:400,600&display=swap" rel="stylesheet">
+  <!-- Font Awesome for icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
+  <style>
+    /* General reset */
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      font-family: 'Montserrat', sans-serif;
+      background: linear-gradient(135deg, #ffd3da, #ffe8e8);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      position: relative;
+      color: #333;
+    }
+    /* Language toggle in top-right */
+    .lang-toggle {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      font-size: 24px;
+      text-decoration: none;
+    }
+    /* Card container */
+    .timer-card {
+      background: #fff;
+      width: 320px;
+      max-width: 90%;
+      border-radius: 20px;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+      padding: 30px 20px;
+      text-align: center;
+      position: relative;
+    }
+    /* Exit button in top-left corner of the card */
+    #exit-btn {
+      position: absolute;
+      top: 15px;
+      left: 15px;
+      background: none;
+      border: none;
+      font-size: 24px;
+      cursor: pointer;
+      color: #aaa;
+      display: none; /* Hidden until paused */
+    }
+    #exit-btn:hover {
+      color: #777;
+    }
+    /* Timer container for the circles */
+    #timer-container {
+      position: relative;
+      width: 220px;
+      height: 220px;
+      margin: 0 auto 20px;
+    }
+    svg {
+      width: 100%;
+      height: 100%;
+    }
+    /* Background circle */
+    #bg-circle {
+      stroke: #f5f5f5;
+      fill: none;
+      stroke-width: 10;
+    }
+    /* Progress circle */
+    #progress-circle {
+      stroke: #ff9a9e;
+      fill: none;
+      stroke-width: 10;
+      stroke-linecap: round;
+      transform: rotate(-90deg);
+      transform-origin: 50% 50%;
+    }
+    /* Timer text in center */
+    #timer-text {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 40px;
+      font-weight: 600;
+      color: #333;
+    }
+    /* Controls area (pause/resume button at bottom center) */
+    #controls {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-top: 10px;
+    }
+    /* Pause/Resume button (circular) */
+    #pause-resume-btn {
+      background: #ff9a9e;
+      border: none;
+      border-radius: 50%;
+      width: 60px;
+      height: 60px;
+      font-size: 24px;
+      color: #fff;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.3s ease;
+    }
+    #pause-resume-btn:hover {
+      background: #f76c6c;
+    }
+    /* Hide audio by default */
+    audio {
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <!-- Language toggle in top-right -->
+  <a href="{% if lang == 'en' %}?lang=vi{% else %}?lang=en{% endif %}" class="lang-toggle">
+    {% if lang == "en" %}
+      🇻🇳
+    {% else %}
+      🇬🇧
+    {% endif %}
+  </a>
+
+  <div class="timer-card">
+    <!-- Exit button in top-left corner -->
+    <button id="exit-btn" title="{{ translations.btn_exit }}">
+      <i class="fas fa-times"></i>
+    </button>
+
+    <!-- Circle timer container -->
+    <div id="timer-container">
+      <svg>
+        <circle id="bg-circle" cx="110" cy="110" r="100"></circle>
+        <circle id="progress-circle" cx="110" cy="110" r="100"></circle>
+      </svg>
+      <div id="timer-text">00:00</div>
+    </div>
+
+    <!-- Controls (Pause/Resume button) -->
+    <div id="controls">
+      <button id="pause-resume-btn" title="{{ translations.btn_pause }}">
+        <i class="fas fa-pause"></i>
+      </button>
+    </div>
+  </div>
+
+  <!-- Audio element for background music -->
+  <audio id="music" src="{{ music_url }}"></audio>
+
+  <script>
+    let totalSeconds = {{ total_seconds }};
+    const originalTotal = {{ total_seconds }};
+    const musicDuration = {{ music_duration }};
+    const audioTalkEnabled = {{ audio_talk_enabled|default:"true"|yesno:"true,false" }};
+
+    let isPaused = false;
+    const audioElement = document.getElementById('music');
+    const timerText = document.getElementById('timer-text');
+    const pauseResumeBtn = document.getElementById('pause-resume-btn');
+    const exitBtn = document.getElementById('exit-btn');
+
+    const progressCircle = document.getElementById('progress-circle');
+    const radius = 100;
+    const circumference = 2 * Math.PI * radius;
+    progressCircle.style.strokeDasharray = circumference;
+    progressCircle.style.strokeDashoffset = circumference;
+
+    // Format time as MM:SS
+    function formatTime(seconds) {
+      let minutes = Math.floor(seconds / 60);
+      let secs = seconds % 60;
+      return (minutes < 10 ? "0" + minutes : minutes) + ":" + (secs < 10 ? "0" + secs : secs);
+    }
+    // Update the progress circle
+    function setProgress(remaining, total) {
+      let percent = remaining / total;
+      let offset = circumference * (1 - percent);
+      progressCircle.style.strokeDashoffset = offset;
+    }
+
+    // Initialize display
+    timerText.innerHTML = formatTime(totalSeconds);
+    setProgress(totalSeconds, originalTotal);
+
+    // Countdown logic
+    let timerInterval;
+    function startTimer() {
+      timerInterval = setInterval(function() {
+        if (!isPaused) {
+          totalSeconds--;
+          if (totalSeconds < 0) totalSeconds = 0;
+          timerText.innerHTML = formatTime(totalSeconds);
+          setProgress(totalSeconds, originalTotal);
+
+          // Play music if audio talk is enabled & time matches musicDuration
+          if (audioTalkEnabled && totalSeconds === musicDuration) {
+            audioElement.play();
+          }
+          // When time finishes, redirect to the first screen
+          if (totalSeconds <= 0) {
+            clearInterval(timerInterval);
+            timerText.innerHTML = "00:00";
+            window.location.href = '/';
+          }
+        }
+      }, 1000);
+    }
+
+    // Toggle Pause/Resume
+    function togglePauseResume() {
+      isPaused = !isPaused;
+      if (isPaused) {
+        pauseResumeBtn.innerHTML = '<i class="fas fa-play"></i>';
+        pauseResumeBtn.title = "{{ translations.btn_resume }}";
+        exitBtn.style.display = "block";
+        // Pause music if playing
+        if (!audioElement.paused) audioElement.pause();
+      } else {
+        pauseResumeBtn.innerHTML = '<i class="fas fa-pause"></i>';
+        pauseResumeBtn.title = "{{ translations.btn_pause }}";
+        exitBtn.style.display = "none";
+        // Resume music if not finished
+        if (audioElement.currentTime > 0 && audioElement.currentTime < audioElement.duration) {
+          audioElement.play();
+        }
+      }
+    }
+
+    // Start the timer
+    startTimer();
+    pauseResumeBtn.addEventListener('click', togglePauseResume);
+    // Exit button logic (same as finishing)
+    exitBtn.addEventListener('click', () => {
+      window.location.href = '/';
+    });
+  </script>
+</body>
+</html>
