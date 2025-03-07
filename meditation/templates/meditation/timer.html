@@ -10,12 +10,10 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
   <style>
     /* General reset */
-    * {
-      box-sizing: border-box;
+    * { box-sizing: border-box; }
+    body {
       margin: 0;
       padding: 0;
-    }
-    body {
       font-family: 'Montserrat', sans-serif;
       background: linear-gradient(135deg, #ffd3da, #ffe8e8);
       display: flex;
@@ -54,7 +52,7 @@
       font-size: 24px;
       cursor: pointer;
       color: #aaa;
-      display: none; /* Hidden until paused */
+      display: none;
     }
     #exit-btn:hover {
       color: #777;
@@ -95,17 +93,18 @@
       font-weight: 600;
       color: #333;
     }
-    /* Controls area (pause/resume button at bottom center) */
+    /* Controls area */
     #controls {
       display: flex;
-      align-items: center;
       justify-content: center;
+      gap: 20px;
       margin-top: 10px;
     }
     /* Pause/Resume button (circular) */
     #pause-resume-btn {
       background: #ff9a9e;
       border: none;
+      padding: 15px;
       border-radius: 50%;
       width: 60px;
       height: 60px;
@@ -120,29 +119,54 @@
     #pause-resume-btn:hover {
       background: #f76c6c;
     }
-    /* Hide audio by default */
-    audio {
-      display: none;
+    audio { display: none; }
+    /* Overlay for unlocking audio and starting session */
+    #start-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(255,255,255,0.95);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      z-index: 10;
+    }
+    #start-overlay h2 {
+      font-size: 24px;
+      margin-bottom: 20px;
+      color: #ff9a9e;
+    }
+    #start-overlay button {
+      padding: 12px 20px;
+      background: #ff9a9e;
+      border: none;
+      border-radius: 8px;
+      color: #fff;
+      font-size: 18px;
+      cursor: pointer;
+      transition: background 0.3s ease;
+    }
+    #start-overlay button:hover {
+      background: #f76c6c;
     }
   </style>
 </head>
 <body>
-  <!-- Language toggle in top-right -->
-  <a href="{% if lang == 'en' %}?lang=vi{% else %}?lang=en{% endif %}" class="lang-toggle">
-    {% if lang == "en" %}
-      🇻🇳
-    {% else %}
-      🇬🇧
-    {% endif %}
-  </a>
+  <!-- Language toggle -->
+  {% if lang == "en" %}
+    <a href="?lang=vi" class="lang-toggle">🇻🇳</a>
+  {% else %}
+    <a href="?lang=en" class="lang-toggle">🇬🇧</a>
+  {% endif %}
 
   <div class="timer-card">
-    <!-- Exit button in top-left corner -->
-    <button id="exit-btn" title="{{ translations.btn_exit }}">
-      <i class="fas fa-times"></i>
-    </button>
+    <!-- Exit button (shown when paused) -->
+    <button id="exit-btn" title="{{ translations.btn_exit }}"><i class="fas fa-times"></i></button>
 
-    <!-- Circle timer container -->
+    <!-- Circular timer container -->
     <div id="timer-container">
       <svg>
         <circle id="bg-circle" cx="110" cy="110" r="100"></circle>
@@ -151,15 +175,18 @@
       <div id="timer-text">00:00</div>
     </div>
 
-    <!-- Controls (Pause/Resume button) -->
+    <!-- Controls: Pause/Resume button -->
     <div id="controls">
-      <button id="pause-resume-btn" title="{{ translations.btn_pause }}">
-        <i class="fas fa-pause"></i>
-      </button>
+      <button id="pause-resume-btn" title="{{ translations.btn_pause }}"><i class="fas fa-pause"></i></button>
     </div>
   </div>
 
-  <!-- Audio element for background music -->
+  <!-- Overlay to capture user interaction to unlock audio -->
+  <div id="start-overlay">
+    <h2>{{ translations.start_session_prompt|default:"Tap to Start Meditation" }}</h2>
+    <button id="start-btn"><i class="fas fa-play"></i> {{ translations.start_session_prompt_btn|default:"Start" }}</button>
+  </div>
+
   <audio id="music" src="{{ music_url }}"></audio>
 
   <script>
@@ -167,12 +194,13 @@
     const originalTotal = {{ total_seconds }};
     const musicDuration = {{ music_duration }};
     const audioTalkEnabled = {{ audio_talk_enabled|default:"true"|yesno:"true,false" }};
-
     let isPaused = false;
     const audioElement = document.getElementById('music');
     const timerText = document.getElementById('timer-text');
     const pauseResumeBtn = document.getElementById('pause-resume-btn');
     const exitBtn = document.getElementById('exit-btn');
+    const startOverlay = document.getElementById('start-overlay');
+    const startBtn = document.getElementById('start-btn');
 
     const progressCircle = document.getElementById('progress-circle');
     const radius = 100;
@@ -180,24 +208,21 @@
     progressCircle.style.strokeDasharray = circumference;
     progressCircle.style.strokeDashoffset = circumference;
 
-    // Format time as MM:SS
     function formatTime(seconds) {
       let minutes = Math.floor(seconds / 60);
       let secs = seconds % 60;
       return (minutes < 10 ? "0" + minutes : minutes) + ":" + (secs < 10 ? "0" + secs : secs);
     }
-    // Update the progress circle
+
     function setProgress(remaining, total) {
       let percent = remaining / total;
       let offset = circumference * (1 - percent);
       progressCircle.style.strokeDashoffset = offset;
     }
 
-    // Initialize display
     timerText.innerHTML = formatTime(totalSeconds);
     setProgress(totalSeconds, originalTotal);
 
-    // Countdown logic
     let timerInterval;
     function startTimer() {
       timerInterval = setInterval(function() {
@@ -206,12 +231,9 @@
           if (totalSeconds < 0) totalSeconds = 0;
           timerText.innerHTML = formatTime(totalSeconds);
           setProgress(totalSeconds, originalTotal);
-
-          // Play music if audio talk is enabled & time matches musicDuration
           if (audioTalkEnabled && totalSeconds === musicDuration) {
             audioElement.play();
           }
-          // When time finishes, redirect to the first screen
           if (totalSeconds <= 0) {
             clearInterval(timerInterval);
             timerText.innerHTML = "00:00";
@@ -221,30 +243,39 @@
       }, 1000);
     }
 
-    // Toggle Pause/Resume
     function togglePauseResume() {
       isPaused = !isPaused;
       if (isPaused) {
         pauseResumeBtn.innerHTML = '<i class="fas fa-play"></i>';
         pauseResumeBtn.title = "{{ translations.btn_resume }}";
         exitBtn.style.display = "block";
-        // Pause music if playing
         if (!audioElement.paused) audioElement.pause();
       } else {
         pauseResumeBtn.innerHTML = '<i class="fas fa-pause"></i>';
         pauseResumeBtn.title = "{{ translations.btn_pause }}";
         exitBtn.style.display = "none";
-        // Resume music if not finished
         if (audioElement.currentTime > 0 && audioElement.currentTime < audioElement.duration) {
           audioElement.play();
         }
       }
     }
 
-    // Start the timer
-    startTimer();
+    // When user taps the overlay, unlock audio and start the timer.
+    startBtn.addEventListener('click', function() {
+      // Unlock audio by playing and immediately pausing.
+      audioElement.play().then(function() {
+        audioElement.pause();
+        audioElement.currentTime = 0;
+      }).catch(function(error) {
+        console.log('Audio unlock failed:', error);
+      });
+      // Remove the overlay.
+      startOverlay.style.display = 'none';
+      // Start the countdown.
+      startTimer();
+    });
+
     pauseResumeBtn.addEventListener('click', togglePauseResume);
-    // Exit button logic (same as finishing)
     exitBtn.addEventListener('click', () => {
       window.location.href = '/';
     });

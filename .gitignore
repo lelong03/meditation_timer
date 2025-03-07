@@ -4,6 +4,7 @@
 __pycache__/
 *.py[cod]
 *$py.class
+*.pyc
 
 # If you use a virtual environment folder named venv, env, etc.
 venv/
