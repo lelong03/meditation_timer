@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <title>{{ translations.session_title }}</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
-    <link rel="icon" type="image/png" sizes="16x16" href="/static/meditation_1.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/static/meditation_1.png">
   <!-- Google Fonts -->
   <link href="https://fonts.googleapis.com/css?family=Montserrat:400,600&display=swap" rel="stylesheet">
   <!-- Font Awesome for icons -->
@@ -59,7 +59,7 @@
       position: relative;
       width: 220px;
       height: 220px;
-      margin: 0 auto 20px;
+      margin: 0 auto 15px;
     }
     svg {
       width: 100%;
@@ -87,6 +87,12 @@
       font-weight: 600;
       color: #333;
     }
+    /* New Music Info Label */
+    #music-info {
+      font-size: 14px;
+      color: #666;
+      margin-bottom: 15px;
+    }
     #controls {
       display: flex;
       justify-content: center;
@@ -111,7 +117,6 @@
     #pause-resume-btn:hover {
       background: #f76c6c;
     }
-    /* Ensure the audio element preloads the file */
     audio { display: none; }
     /* Overlay for initial user interaction */
     #start-overlay {
@@ -164,6 +169,14 @@
       </svg>
       <div id="timer-text">00:00</div>
     </div>
+    <!-- Music Info Label -->
+    <div id="music-info">
+      {% if music_duration > 0 %}
+        {{ translations.music_label }}{{ music_duration_str }}
+      {% else %}
+        {{ translations.no_music }}
+      {% endif %}
+    </div>
     <div id="controls">
       <button id="pause-resume-btn" title="{{ translations.btn_pause }}"><i class="fas fa-pause"></i></button>
     </div>
@@ -175,7 +188,6 @@
     <button id="start-btn"><i class="fas fa-play"></i> {{ translations.start_session_prompt_btn }}</button>
   </div>
 
-  <!-- Note: Added preload="auto" to help load the audio file -->
   <audio id="music" src="{{ music_url }}" preload="auto"></audio>
 
   <script>
@@ -279,13 +291,7 @@
         console.log('Audio unlock failed:', error);
       });
       startOverlay.style.display = 'none';
-
-      if (audioTalkEnabled && totalSeconds <= musicStartTime && audioElement.paused) {
-          audioElement.play().catch(error => {
-            console.log('Audio play error:', error);
-          });
-      }
-
+      // Start the countdown
       startTimer();
     });
 
