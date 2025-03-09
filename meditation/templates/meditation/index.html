@@ -1,12 +1,12 @@
 <!DOCTYPE html>
-<html>
+<html lang="">
 <head>
   <meta charset="utf-8">
   <title>{{ translations.page_title }}</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <!-- Google Fonts -->
+    <link rel="icon" type="image/png" sizes="16x16" href="/static/meditation_1.png">
+  <!-- Google Fonts and Font Awesome -->
   <link href="https://fonts.googleapis.com/css?family=Montserrat:400,500,700&display=swap" rel="stylesheet">
-  <!-- Font Awesome for icons -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
   <style>
     * { box-sizing: border-box; }
@@ -14,7 +14,7 @@
       margin: 0;
       padding: 0;
       font-family: 'Montserrat', sans-serif;
-      background: linear-gradient(135deg, #ffecd2, #fcb69f); /* pastel radiant gradient */
+      background: linear-gradient(135deg, #ffecd2, #fcb69f);
       display: flex;
       align-items: center;
       justify-content: center;
@@ -27,6 +27,8 @@
       width: 90%;
       max-width: 400px;
       box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      text-align: center;
+      position: relative;
     }
     .lang-toggle {
       position: absolute;
@@ -35,14 +37,23 @@
       font-size: 24px;
       text-decoration: none;
     }
+    .master-img {
+      width: 100px;
+      height: 100px;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 3px solid #ff9a9e;
+      margin: 0 auto 15px;
+      display: block;
+    }
     h1 {
-      text-align: center;
-      margin-bottom: 20px;
       font-size: 22px;
+      margin-bottom: 20px;
       color: #333;
     }
     .form-group {
       margin-bottom: 20px;
+      text-align: left;
     }
     label {
       display: block;
@@ -58,19 +69,6 @@
       border-radius: 8px;
       background: #fff;
       color: #333;
-    }
-    .checkbox-container {
-      display: flex;
-      align-items: center;
-      margin-bottom: 20px;
-    }
-    .checkbox-container input[type="checkbox"] {
-      width: auto;
-      margin-right: 8px;
-    }
-    .checkbox-container label {
-      font-size: 14px;
-      color: #555;
     }
     button {
       width: 100%;
@@ -103,6 +101,8 @@
     {% endif %}
   </a>
   <div class="container">
+    <!-- Display the master image -->
+    <img src="/static/images/master.png" alt="Master" class="master-img">
     <h1>{{ translations.heading }}</h1>
     {% if error %}
       <div style="color:red; text-align:center;">{{ error }}</div>
@@ -122,24 +122,17 @@
         </select>
       </div>
       <div class="form-group">
-        <div class="checkbox-container">
-          <input type="checkbox" name="audio_talk" id="audio_talk" checked>
-          <label for="audio_talk">{{ translations.checkbox_label }}</label>
-        </div>
-      </div>
-      <div class="form-group">
         <label for="album">{{ translations.label_album }}</label>
         <select name="album" id="album" required>
-          {% if albums|length == 1 %}
-            {% for album in albums %}
-              <option value="{{ album.id }}" selected>{{ album.name }} (by {{ album.author }})</option>
-            {% endfor %}
-          {% else %}
-            <option value="" disabled selected>-- {{ translations.select_album }} --</option>
+
+          {% if albums|length > 0 %}
             {% for album in albums %}
               <option value="{{ album.id }}">{{ album.name }} (by {{ album.author }})</option>
             {% endfor %}
           {% endif %}
+
+            <!-- New option for not using music -->
+          <option value="0">{{ translations.album_option_none }}</option>
         </select>
       </div>
       <button type="submit" title="{{ translations.button_start }}">
@@ -147,15 +140,5 @@
       </button>
     </form>
   </div>
-  <script>
-    // Disable album dropdown if "Meditation Audio Talk" is unchecked
-    const audioTalkCheckbox = document.getElementById('audio_talk');
-    const albumSelect = document.getElementById('album');
-    function toggleAlbumSelect() {
-      albumSelect.disabled = !audioTalkCheckbox.checked;
-    }
-    audioTalkCheckbox.addEventListener('change', toggleAlbumSelect);
-    toggleAlbumSelect();
-  </script>
 </body>
 </html>

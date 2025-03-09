@@ -2,6 +2,8 @@
 # Python
 # ------------------------
 __pycache__/
+meditation/__pycache__/
+meditation_timer/__pycache__/
 *.py[cod]
 *$py.class
 *.pyc
